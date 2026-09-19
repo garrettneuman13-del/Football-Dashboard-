@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Football Dashboard</title>
+<style>
+:root{--bg:#080b10;--panel:#111722;--panel2:#171e2a;--text:#f4f7fb;--muted:#9aa6b5;--accent:#6fcf97;--live:#ff5d5d;--line:#263142}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,#172131 0,#080b10 45%);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+header{height:92px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;border-bottom:1px solid var(--line);background:rgba(8,11,16,.86)}
+h1{margin:0;font-size:34px;letter-spacing:2px}.sub{color:var(--muted);font-size:15px;margin-top:5px}
+#clock{font-size:28px;font-weight:700;text-align:right}.status{color:var(--muted);font-size:13px;margin-top:5px}
+main{padding:24px 30px}.section-title{font-size:18px;font-weight:800;letter-spacing:1.5px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.panel{background:rgba(17,23,34,.92);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 12px 35px rgba(0,0,0,.25)}
+.panel-head{padding:15px 18px;background:var(--panel2);display:flex;justify-content:space-between;align-items:center}.league{font-weight:800;letter-spacing:1px}.count{font-size:12px;color:var(--muted)}
+.games{padding:8px}.game{padding:14px 12px;border-bottom:1px solid var(--line)}.game:last-child{border-bottom:0}
+.teams{display:grid;grid-template-columns:1fr auto;gap:4px}.team{display:flex;justify-content:space-between;font-size:20px;font-weight:700}.record{color:var(--muted);font-size:12px;font-weight:400;margin-left:8px}.score{font-size:22px}
+.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:8px}.live{color:var(--live);font-weight:800;text-transform:uppercase}.scheduled{color:var(--accent);font-weight:700}.final{color:#d2d8e0;font-weight:700}
+.empty{padding:24px;color:var(--muted);text-align:center}
+footer{display:flex;justify-content:space-between;align-items:center;padding:12px 30px;color:var(--muted);font-size:12px}
+button{background:#202b3b;border:1px solid #334258;color:white;border-radius:8px;padding:8px 12px;cursor:pointer}button:hover{background:#2a374a}
+.fantasy-wrap{margin-top:22px}.fantasy-panel{display:none}.fantasy-panel.active{display:block}.fantasy-card{padding:18px;border-bottom:1px solid var(--line)}.fantasy-card:last-child{border-bottom:0}.fantasy-title{font-size:24px;font-weight:800}.fantasy-score{font-size:32px;font-weight:800;margin-top:8px}.fantasy-vs{color:var(--muted);font-size:14px;margin-top:5px}.fantasy-note{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}header{padding:0 18px}main{padding:18px}.team{font-size:18px}}
+
+.dash-view{display:none}.dash-view.active{display:block}
+.fantasy-full{min-height:620px}
+.fantasy-matchup{padding:24px}
+.fantasy-scoreboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:22px;padding:20px;border-bottom:1px solid var(--line)}
+.fteam{text-align:center}.fteam-name{font-size:27px;font-weight:800}.fteam-score{font-size:54px;font-weight:900;margin-top:8px}.fvs{font-size:20px;color:var(--muted);font-weight:800}
+.starters-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:20px}
+.starter-col{background:rgba(23,30,42,.55);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.starter-head{padding:12px 14px;font-weight:800;background:var(--panel2)}
+.player-row{display:grid;grid-template-columns:46px 1fr auto;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.player-row:last-child{border-bottom:0}.pos{font-size:12px;color:var(--muted);font-weight:800}.pname{font-size:16px;font-weight:700}.ppts{font-size:18px;font-weight:800}
+.view-dots{display:flex;gap:7px;justify-content:center;margin-left:18px}.dot{width:8px;height:8px;border-radius:50%;background:#485568}.dot.active{background:var(--accent)}
+@media(max-width:900px){.starters-grid{grid-template-columns:1fr}.fantasy-scoreboard{grid-template-columns:1fr}.fvs{display:none}}
+
+.all-leagues-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:20px}
+.all-league-col{background:rgba(23,30,42,.55);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.league-match{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--line)}
+.league-match:last-child{border-bottom:0}.lm-team{font-size:15px;font-weight:700;min-width:0}.lm-team.right{text-align:right}.lm-score{font-size:20px;font-weight:900;white-space:nowrap}.lm-me{color:var(--accent)}
+@media(max-width:900px){.all-leagues-grid{grid-template-columns:1fr}}
+
+.lm-special{color:#ffb347;font-weight:900;text-shadow:0 0 12px rgba(255,179,71,.18)}
+
+
+.game.sticky{padding:20px 18px;min-height:118px}
+.game.sticky .team{font-size:22px;font-weight:900}
+.game.sticky .score{font-size:34px;font-weight:900}
+.game.sticky .logo{width:42px;height:42px}
+.game.sticky .status,.game.sticky .date{font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🏈 FOOTBALL</h1><div class="sub" id="date">Loading…</div></div>
+  <div><div id="clock">--:--</div><div class="status" id="status">Updating…</div></div>
+</header>
+
+<main>
+  <section class="dash-view active" id="scoresView">
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head"><div class="league">NFL</div><div class="count" id="nflCount"></div></div>
+        <div class="games" id="nflGames"><div class="empty">Loading NFL scores…</div></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div class="league">COLLEGE • AP TOP 25</div><div class="count" id="cfbCount"></div></div>
+        <div class="games" id="cfbGames"><div class="empty">Loading college scores…</div></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="dash-view" id="fantasy1View">
+    <section class="panel fantasy-full">
+      <div class="panel-head"><div class="league">SLEEPER • DESHAUNSHANK REDEMPTION</div><div class="count" id="fantasy1Week"></div></div>
+      <div id="fantasy1"><div class="empty">Loading Sleeper matchup…</div></div>
+    </section>
+  </section>
+
+  <section class="dash-view" id="fantasy2View">
+    <section class="panel fantasy-full">
+      <div class="panel-head"><div class="league">SLEEPER • NJIGBAS IN PARIS</div><div class="count" id="fantasy2Week"></div></div>
+      <div id="fantasy2"><div class="empty">Loading Sleeper matchup…</div></div>
+    </section>
+  </section>
+
+
+  <section class="dash-view" id="bandsView">
+    <section class="panel fantasy-full">
+      <div class="panel-head"><div class="league">SLEEPER • BANDS EMEKA DANCE</div><div class="count" id="bandsWeek"></div></div>
+      <div id="bandsFantasy"><div class="empty">Loading Sleeper matchup…</div></div>
+    </section>
+  </section>
+  <section class="dash-view" id="allMatchupsView">
+    <section class="panel fantasy-full">
+      <div class="panel-head"><div class="league">SLEEPER • ALL LEAGUE MATCHUPS</div><div class="count">Both leagues</div></div>
+      <div class="all-leagues-grid">
+        <div class="all-league-col">
+          <div class="starter-head">DESHAUNSHANK REDEMPTION LEAGUE</div>
+          <div id="allMatchups1"><div class="empty">Loading league matchups…</div></div>
+        </div>
+        <div class="all-league-col">
+          <div class="starter-head">NJIGBAS IN PARIS LEAGUE</div>
+          <div id="allMatchups2"><div class="empty">Loading league matchups…</div></div>
+        </div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<footer>
+  <div>Live scores via ESPN public scoreboard data</div>
+  <button onclick="refreshAll()">↻ Refresh now</button>
+</footer>
+
+<script>
+const ESPN = "https://site.api.espn.com/apis/site/v2/sports/";
+const FAVORITES = {
+  nfl: ["Dallas Cowboys","Denver Broncos"],
+  cfb: ["Texas Longhorns","Colorado Buffaloes"]
+};
+const PAGE_SIZE = 10;
+const PAGE_SECONDS = 15;
+const leagueData = {};
+const pageIndex = {nfl:0, cfb:0};
+let apRanks = {};
+
+function fmtDateTime(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString([], {month:"short",day:"numeric"})+" • "+
+         d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+}
+function isFav(name, league){
+  const n=(name||"").toLowerCase();
+  return (FAVORITES[league]||[]).some(x=>{
+    const f=x.toLowerCase();
+    return n===f || n.includes(f) || f.includes(n);
+  });
+}
+function getGameStatus(c){
+  const s=c?.status || c?.competitions?.[0]?.status || {};
+  const state=s?.type?.state;
+  if(state==="in"){
+    const period=Number(s.period||0);
+    const clock=s.displayClock || "";
+    let q = period===1 ? "1st" : period===2 ? "2nd" : period===3 ? "3rd" :
+            period===4 ? "4th" : period>4 ? `OT${period-4>1 ? " "+(period-4) : ""}` : "LIVE";
+    return {cls:"live", label:`${q} • ${clock}`};
+  }
+  if(state==="post") return {cls:"final",label:"FINAL"};
+  return {cls:"scheduled",label:fmtDateTime(c.date)};
+}
+function rankFor(team){
+  if(!team) return null;
+  return apRanks[String(team.id)] || apRanks[(team.displayName||"").toLowerCase()] || null;
+}
+function teamLabel(comp, league){
+  const team=comp?.team || {};
+  const rank=league==="cfb" ? rankFor(team) : null;
+  return `${rank ? `<span style="color:#ffd166;margin-right:6px">#${rank}</span>` : ""}${team.shortDisplayName||team.displayName||""}`;
+}
+function favoritePriority(event, league){
+  const names=(event.competitions?.[0]?.competitors||[]).map(x=>(x.team?.displayName||"").toLowerCase());
+  const order = league==="nfl"
+    ? ["dallas cowboys","denver broncos"]
+    : ["texas longhorns","colorado buffaloes"];
+  for(let i=0;i<order.length;i++){
+    if(names.some(n=>n===order[i] || n.includes(order[i]) || order[i].includes(n))) return i;
+  }
+  return 999;
+}
+function sortedEvents(data, league){
+  const events=(data?.events||[]).slice();
+  events.sort((a,b)=>{
+    const pa=favoritePriority(a,league), pb=favoritePriority(b,league);
+    if(pa!==pb) return pa-pb;
+    const ca=a.competitions?.[0], cb=b.competitions?.[0];
+    const ai=ca?.status?.type?.state==="in", bi=cb?.status?.type?.state==="in";
+    if(ai!==bi) return Number(bi)-Number(ai);
+    return new Date(a.date)-new Date(b.date);
+  });
+  return events;
+}
+
+function collegeDisplayEvents(events){
+  return events.filter(e=>{
+    const comps=e.competitions?.[0]?.competitors||[];
+    const favorite=comps.some(x=>isFav(x.team?.displayName||"","cfb"));
+    const ranked=comps.some(x=>{
+      const r=rankFor(x.team);
+      return r && r>=1 && r<=25;
+    });
+    return favorite || ranked;
+  });
+}
+
+function favoriteEvents(events,league){
+  return events.filter(e=>(e.competitions?.[0]?.competitors||[])
+    .some(x=>isFav(x.team?.displayName||"",league)));
+}
+function nonFavoriteEvents(events,league){
+  return events.filter(e=>!(e.competitions?.[0]?.competitors||[])
+    .some(x=>isFav(x.team?.displayName||"",league)));
+}
+function gameHTML(e,league,sticky=false){
+  const c=e.competitions[0];
+  const away=c.competitors.find(x=>x.homeAway==="away");
+  const home=c.competitors.find(x=>x.homeAway==="home");
+  const gs=getGameStatus(c);
+  const gameDate=c.date||e.date;
+  const logo=t=>t?.team?.logo ? `<img src="${t.team.logo}" style="width:24px;height:24px;vertical-align:middle;margin-right:8px">` : "";
+  return `<div class="game" ${sticky?'style="background:rgba(111,207,151,.08);border-left:4px solid #6fcf97"':""}>
+    <div class="teams">
+      <div class="team"><span>${logo(away)}${teamLabel(away,league)}</span><span class="score">${away?.score??""}</span></div><div></div>
+      <div class="team"><span>${logo(home)}${teamLabel(home,league)}</span><span class="score">${home?.score??""}</span></div><div></div>
+    </div>
+    <div class="meta">
+      <span>${new Date(gameDate).toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"})}${sticky?' • ★ FAVORITE':''}</span>
+      <span class="${gs.cls}">${gs.label}</span>
+    </div>
+  </div>`;
+}
+function render(data,el,league,countEl){
+  let events=sortedEvents(data,league);
+  if(league==="cfb") events=collegeDisplayEvents(events);
+  const favs=favoriteEvents(events,league);
+  const others=nonFavoriteEvents(events,league);
+
+  // Favorites do not count against the rotating page size: they remain at the top.
+  const pages=Math.max(1,Math.ceil(others.length/PAGE_SIZE));
+  if(pageIndex[league]>=pages) pageIndex[league]=0;
+  const start=pageIndex[league]*PAGE_SIZE;
+  const visible=others.slice(start,start+PAGE_SIZE);
+
+  if(!events.length){
+    el.innerHTML='<div class="empty">No games on the scoreboard today.</div>';
+    countEl.textContent="";
+    return;
+  }
+  el.innerHTML=favs.map(e=>gameHTML(e,league,true)).join("")+
+               visible.map(e=>gameHTML(e,league,false)).join("");
+  countEl.textContent=pages>1
+    ? `${events.length} games • page ${pageIndex[league]+1}/${pages} • favorites stay on top`
+    : `${events.length} game${events.length===1?"":"s"}`;
+}
+async function fetchAPRanks(){
+  try{
+    const r=await fetch(ESPN+"football/college-football/rankings");
+    if(!r.ok) throw new Error(r.status);
+    const data=await r.json();
+    const poll=(data.rankings||[]).find(p=>
+      (p.name||"").toLowerCase().includes("ap top 25") ||
+      (p.shortName||"").toLowerCase().includes("ap top 25")
+    );
+    const ranks={};
+    (poll?.ranks||[]).forEach(item=>{
+      const rank=Number(item.current||item.rank||item.currentRank);
+      const team=item.team||{};
+      if(rank>=1 && rank<=25){
+        if(team.id) ranks[String(team.id)]=rank;
+        if(team.displayName) ranks[team.displayName.toLowerCase()]=rank;
+      }
+    });
+    apRanks=ranks;
+  }catch(e){
+    console.warn("AP rankings unavailable",e);
+  }
+}
+async function fetchLeague(path,el,league,countEl){
+  try{
+    // groups=80 returns the full FBS slate instead of only the default featured/top-25 set.
+    const suffix=league==="cfb" ? "/scoreboard?groups=80&limit=100" : "/scoreboard";
+    const r=await fetch(ESPN+path+suffix);
+    if(!r.ok) throw new Error(r.status);
+    const data=await r.json();
+    leagueData[league]=data;
+    render(data,el,league,countEl);
+  }catch(err){
+    el.innerHTML='<div class="empty">Could not load scores. Check the laptop internet connection.</div>';
+    countEl.textContent="";
+  }
+}
+function rotatePages(){
+  ["nfl","cfb"].forEach(league=>{
+    const data=leagueData[league];
+    if(!data) return;
+    let rotationEvents=sortedEvents(data,league);
+    if(league==="cfb") rotationEvents=collegeDisplayEvents(rotationEvents);
+    const others=nonFavoriteEvents(rotationEvents,league);
+    const pages=Math.max(1,Math.ceil(others.length/PAGE_SIZE));
+    if(pages>1){
+      pageIndex[league]=(pageIndex[league]+1)%pages;
+      render(data,
+        document.getElementById(league==="nfl"?"nflGames":"cfbGames"),
+        league,
+        document.getElementById(league==="nfl"?"nflCount":"cfbCount"));
+    }
+  });
+}
+async function refreshAll(){
+  document.getElementById("status").textContent="Updating…";
+  await fetchAPRanks();
+  await Promise.all([
+    fetchLeague("football/nfl",document.getElementById("nflGames"),"nfl",document.getElementById("nflCount")),
+    fetchLeague("football/college-football",document.getElementById("cfbGames"),"cfb",document.getElementById("cfbCount"))
+  ]);
+  document.getElementById("status").textContent="Last update "+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit",second:"2-digit"});
+}
+function tick(){
+  const now=new Date();
+  document.getElementById("clock").textContent=now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+  document.getElementById("date").textContent=now.toLocaleDateString([], {weekday:"long",month:"long",day:"numeric",year:"numeric"});
+}
+
+
+const SLEEPER_LEAGUES=[
+  {id:"1389327391125426176", team:"Deshaunshank redemption", el:"fantasy1", view:"fantasy1View", weekEl:"fantasy1Week", allEl:"allMatchups1"},
+  {id:"1399540677561311232", team:"Njigbas in Paris", el:"fantasy2", view:"fantasy2View", weekEl:"fantasy2Week", allEl:"allMatchups2"}
+];
+const BANDS_TEAM={team:"Bands Emeka Dance",el:"bandsFantasy",weekEl:"bandsWeek"};
+const MAIN_VIEWS=["scoresView","fantasy1View","fantasy2View","bandsView","allMatchupsView"];
+let mainViewIndex=0;
+let sleeperPlayers={};
+
+async function sleeperJSON(path){
+  const r=await fetch("https://api.sleeper.app/v1"+path);
+  if(!r.ok) throw new Error(r.status);
+  return r.json();
+}
+function rosterName(r,userById){
+  const u=userById[r?.owner_id]||{};
+  return (u.metadata?.team_name||u.display_name||"Team").trim();
+}
+function playerName(id){
+  const p=sleeperPlayers[id]||{};
+  return p.full_name || [p.first_name,p.last_name].filter(Boolean).join(" ") || id;
+}
+function playerPos(id){
+  return sleeperPlayers[id]?.position || "";
+}
+function starterRows(match){
+  const starters=match?.starters||[];
+  const pts=match?.players_points||{};
+  if(!starters.length) return '<div class="empty">No starters available.</div>';
+  return starters.map(id=>`<div class="player-row">
+    <div class="pos">${playerPos(id)}</div>
+    <div class="pname">${playerName(id)}</div>
+    <div class="ppts">${Number(pts[id]||0).toFixed(1)}</div>
+  </div>`).join("");
+}
+async function ensureSleeperPlayers(){
+  if(Object.keys(sleeperPlayers).length) return;
+  try{sleeperPlayers=await sleeperJSON("/players/nfl");}catch(e){console.warn("Player directory unavailable",e);}
+}
+
+
+async function loadSleeperLeague(cfg){
+  const el=document.getElementById(cfg.el);
+  try{
+    const league=await sleeperJSON(`/league/${cfg.id}`);
+    const week=Number(league?.settings?.leg||1);
+    const [rosters,users,matchups]=await Promise.all([
+      sleeperJSON(`/league/${cfg.id}/rosters`),
+      sleeperJSON(`/league/${cfg.id}/users`),
+      sleeperJSON(`/league/${cfg.id}/matchups/${week}`)
+    ]);
+    const userById=Object.fromEntries(users.map(u=>[u.user_id,u]));
+    const key=cfg.team.toLowerCase().replace(/[^a-z0-9]/g,"");
+    let mine=rosters.find(r=>rosterName(r,userById).toLowerCase()===cfg.team.toLowerCase()) ||
+             rosters.find(r=>rosterName(r,userById).toLowerCase().replace(/[^a-z0-9]/g,"")===key);
+    if(!mine) throw new Error("Team name not found");
+    const myMatch=matchups.find(m=>m.roster_id===mine.roster_id);
+    const oppMatch=matchups.find(m=>m.matchup_id===myMatch?.matchup_id && m.roster_id!==mine.roster_id);
+    const oppRoster=rosters.find(r=>r.roster_id===oppMatch?.roster_id);
+    const myName=rosterName(mine,userById);
+    const oppName=oppRoster?rosterName(oppRoster,userById):"Opponent";
+    const myPts=Number(myMatch?.points||0).toFixed(2);
+    const oppPts=Number(oppMatch?.points||0).toFixed(2);
+
+    el.innerHTML=`<div class="fantasy-matchup">
+      <div class="fantasy-scoreboard">
+        <div class="fteam"><div class="fteam-name">${myName}</div><div class="fteam-score">${myPts}</div></div>
+        <div class="fvs">VS</div>
+        <div class="fteam"><div class="fteam-name">${oppName}</div><div class="fteam-score">${oppPts}</div></div>
+      </div>
+      <div class="starters-grid">
+        <div class="starter-col"><div class="starter-head">${myName} • STARTERS</div>${starterRows(myMatch)}</div>
+        <div class="starter-col"><div class="starter-head">${oppName} • STARTERS</div>${starterRows(oppMatch)}</div>
+      </div>
+    </div>`;
+    document.getElementById(cfg.weekEl).textContent=`Week ${week} • Live matchup`;
+    // Render every matchup in this Sleeper league.
+    const byMatch={};
+    matchups.forEach(m=>{
+      if(m.matchup_id==null) return;
+      (byMatch[m.matchup_id] ||= []).push(m);
+    });
+    const allHTML=Object.values(byMatch).map(pair=>{
+      const a=pair[0], b=pair[1];
+      const ar=rosters.find(r=>r.roster_id===a?.roster_id);
+      const br=rosters.find(r=>r.roster_id===b?.roster_id);
+      const an=ar?rosterName(ar,userById):"Team";
+      const bn=br?rosterName(br,userById):"Team";
+      const aMine=ar?.roster_id===mine.roster_id, bMine=br?.roster_id===mine.roster_id;
+      const special="bands emeka dance";
+      const aSpecial=an.toLowerCase()===special, bSpecial=bn.toLowerCase()===special;
+      return `<div class="league-match">
+        <div class="lm-team ${aMine?"lm-me":""} ${aSpecial?"lm-special":""}">${an}</div>
+        <div class="lm-score">${Number(a?.points||0).toFixed(2)} – ${Number(b?.points||0).toFixed(2)}</div>
+        <div class="lm-team right ${bMine?"lm-me":""} ${bSpecial?"lm-special":""}">${bn}</div>
+      </div>`;
+    }).join("");
+    document.getElementById(cfg.allEl).innerHTML=allHTML||'<div class="empty">No matchups available.</div>';
+
+  }catch(e){
+    el.innerHTML=`<div class="empty">Could not load this Sleeper matchup. ${e.message==="Team name not found"?"Check the exact team name.":""}</div>`;
+  }
+}
+
+async function loadBandsTeam(){
+  const el=document.getElementById(BANDS_TEAM.el);
+  const key=BANDS_TEAM.team.toLowerCase().replace(/[^a-z0-9]/g,"");
+  for(const source of SLEEPER_LEAGUES){
+    try{
+      const league=await sleeperJSON(`/league/${source.id}`);
+      const week=Number(league?.settings?.leg||1);
+      const [rosters,users,matchups]=await Promise.all([
+        sleeperJSON(`/league/${source.id}/rosters`),
+        sleeperJSON(`/league/${source.id}/users`),
+        sleeperJSON(`/league/${source.id}/matchups/${week}`)
+      ]);
+      const userById=Object.fromEntries(users.map(u=>[u.user_id,u]));
+      const mine=rosters.find(r=>rosterName(r,userById).toLowerCase().replace(/[^a-z0-9]/g,"")===key);
+      if(!mine) continue;
+      const myMatch=matchups.find(m=>m.roster_id===mine.roster_id);
+      const oppMatch=matchups.find(m=>m.matchup_id===myMatch?.matchup_id && m.roster_id!==mine.roster_id);
+      const oppRoster=rosters.find(r=>r.roster_id===oppMatch?.roster_id);
+      const myName=rosterName(mine,userById);
+      const oppName=oppRoster?rosterName(oppRoster,userById):"Opponent";
+      el.innerHTML=`<div class="fantasy-matchup">
+        <div class="fantasy-scoreboard">
+          <div class="fteam"><div class="fteam-name lm-special">${myName}</div><div class="fteam-score">${Number(myMatch?.points||0).toFixed(2)}</div></div>
+          <div class="fvs">VS</div>
+          <div class="fteam"><div class="fteam-name">${oppName}</div><div class="fteam-score">${Number(oppMatch?.points||0).toFixed(2)}</div></div>
+        </div>
+        <div class="starters-grid">
+          <div class="starter-col"><div class="starter-head">${myName} • STARTERS</div>${starterRows(myMatch)}</div>
+          <div class="starter-col"><div class="starter-head">${oppName} • STARTERS</div>${starterRows(oppMatch)}</div>
+        </div>
+      </div>`;
+      document.getElementById(BANDS_TEAM.weekEl).textContent=`Week ${week} • Live matchup`;
+      return;
+    }catch(e){}
+  }
+  el.innerHTML='<div class="empty">Bands Emeka Dance was not found in either Sleeper league.</div>';
+}
+
+async function refreshFantasy(){
+  await ensureSleeperPlayers();
+  await Promise.all([...SLEEPER_LEAGUES.map(loadSleeperLeague),loadBandsTeam()]);
+}
+function showMainView(index){
+  mainViewIndex=index%MAIN_VIEWS.length;
+  document.querySelectorAll(".dash-view").forEach(v=>v.classList.remove("active"));
+  document.getElementById(MAIN_VIEWS[mainViewIndex]).classList.add("active");
+}
+let viewTimer=null;
+function scheduleNextView(){
+  if(viewTimer) clearTimeout(viewTimer);
+  const current=MAIN_VIEWS[mainViewIndex];
+  const hold=current==="scoresView" ? 20000 : 30000;
+  viewTimer=setTimeout(()=>{
+    showMainView((mainViewIndex+1)%MAIN_VIEWS.length);
+    scheduleNextView();
+  },hold);
+}
+tick();
+setInterval(tick,1000);
+refreshAll();
+refreshFantasy();
+showMainView(0);
+setInterval(refreshAll,30000);
+setInterval(refreshFantasy,30000);
+setInterval(rotatePages,PAGE_SECONDS*1000);
+scheduleNextView();
+</script>
+
+</body>
+</html>
